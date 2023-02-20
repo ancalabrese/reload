@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ancalabrese/Reload/data"
 	"github.com/ancalabrese/Reload/handlers"
 	"github.com/fsnotify/fsnotify"
 )
@@ -47,7 +48,7 @@ func GetConfigMonitorInstance(ctx context.Context) (*ConfigMonitor, error) {
 
 // TrackNew adds the file path to the monitored paths
 func (cm *ConfigMonitor) TrackNew(path string, config interface{}) error {
-	c, err := NewConfigurationFile(path, config)
+	c, err := data.NewConfigurationFile(path, config)
 	if err != nil {
 		return err
 	}
@@ -88,6 +89,7 @@ func (cm *ConfigMonitor) monitorUp() {
 		case event := <-cm.watcher.Events:
 			if event.Op.Has(fsnotify.Write) {
 				writeEvent, _ := handlers.NewWriteEvent(event)
+				// TODO: handle event once writes are deduped
 				cm.writeEventHandler.EventChannel <- writeEvent
 			}
 

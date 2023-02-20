@@ -1,37 +1,41 @@
 package configuration
 
-import "fmt"
+import (
+	"fmt"
 
-// ConfigurationManager is the internal tracker of monitored files.
+	"github.com/ancalabrese/Reload/data"
+)
+
+// ConfigCache is the internal cache of monitored files.
 type ConfigCache struct {
-	configurations map[string]*ConfigurationFile
+	configurations map[string]*data.ConfigurationFile
 }
 
 var configManager *ConfigCache
 
-// GetCacheInstance get a Singleton instance ConfigurationManager
+// GetCacheInstance get a singleton instance ConfigCache
 func GetCacheInstance() *ConfigCache {
 
 	if configManager == nil {
 		configManager = &ConfigCache{
-			configurations: make(map[string]*ConfigurationFile),
+			configurations: make(map[string]*data.ConfigurationFile),
 		}
 	}
 
 	return configManager
 }
 
-// TrackNewConfig adds new files to ConfigurationManger.
+// Add new files to ConfigCache.
 func (cm *ConfigCache) Add(
-	configurations ...*ConfigurationFile) {
+	configurations ...*data.ConfigurationFile) {
 	for _, c := range configurations {
-		if _, ok := cm.configurations[c.filePath]; !ok {
-			cm.configurations[c.filePath] = c
+		if _, ok := cm.configurations[c.FilePath]; !ok {
+			cm.configurations[c.FilePath] = c
 		}
 	}
 }
 
-// Remove removes files from ConfigurationManger.
+// Remove removes files from ConfigCache.
 func (cm *ConfigCache) Remove(path string) {
 	delete(cm.configurations, path)
 }
