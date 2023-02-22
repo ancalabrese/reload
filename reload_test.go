@@ -2,8 +2,6 @@ package reload
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type TestConfig struct {

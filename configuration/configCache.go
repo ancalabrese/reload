@@ -35,6 +35,10 @@ func (cm *ConfigCache) Add(
 	}
 }
 
+func (cm *ConfigCache) Get(path string) *data.ConfigurationFile {
+	return cm.configurations[path]
+}
+
 // Remove removes files from ConfigCache.
 func (cm *ConfigCache) Remove(path string) {
 	delete(cm.configurations, path)
@@ -43,7 +47,7 @@ func (cm *ConfigCache) Remove(path string) {
 // Reload reads the config file and updates the
 // cached configuration files
 func (cm *ConfigCache) Reload(path string) error {
-	err := cm.configurations[path].LoadConfiguration()
+	err := cm.Get(path).LoadConfiguration()
 	if err != nil {
 		return fmt.Errorf("error loading new config: %w", err)
 	}
