@@ -38,6 +38,8 @@ func GetConfigMonitorInstance(ctx context.Context) (*ConfigMonitor, error) {
 			watcher:           w,
 			configManager:     configManager,
 			writeEventHandler: weh,
+			eventChan:         make(chan fsnotify.Event),
+			errChan:           make(chan error),
 		}
 
 		go monitor.monitorUp()
