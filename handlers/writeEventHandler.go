@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sync"
@@ -14,8 +15,10 @@ type WriteEvent struct {
 }
 
 type WriteEventHandler struct {
-	EventChannel chan (*WriteEvent)
-	ErrChan      chan (error)
+	ctx            context.Context
+	eventChannel   chan (*WriteEvent)
+	errChan        chan (error)
+	reloadPathChan chan (string)
 }
 
 // NewWriteEvent creates and new WriteEvent. Return errors is the
@@ -32,18 +35,31 @@ func NewWriteEvent(event fsnotify.Event) (*WriteEvent, error) {
 
 // NewWriteEventHandler creates a new WriteEvent handler ans starts
 // listening for new Write events
-func NewWriteEventHandler(eventChannel chan (*WriteEvent)) *WriteEventHandler {
+func NewWriteEventHandler(
+	ctx context.Context,
+	eventChannel chan (*WriteEvent)) *WriteEventHandler {
 	weh := &WriteEventHandler{
-		EventChannel: eventChannel,
+		ctx:            ctx,
+		eventChannel:   eventChannel,
+		reloadPathChan: make(chan string),
 	}
+
 	go weh.handleEvents()
 
 	return weh
 }
 
-// handleEvents handles the write events. Writes might come in bursts.
-// It makes sure to waits until no more events are received for the same file,
-// then it sends it back to the channel to handle the new config.
+func (weh *WriteEventHandler) GetRelaodChan() <-chan (string) {
+	return weh.reloadPathChan
+}
+
+func (weh *WriteEventHandler) GetErrChan() <-chan (error) {
+	return weh.errChan
+}
+
+// handleEvents handles write events. Writes might come in bursts.
+// It makes sure to wait until no more events are received for the same file,
+// then it notify watchers via the new config channel.
 func (weh *WriteEventHandler) handleEvents() {
 	// Wait 100ms for new events; each new event resets the timer.
 	waitFor := 100 * time.Millisecond
@@ -52,30 +68,39 @@ func (weh *WriteEventHandler) handleEvents() {
 	timers := make(map[string]*time.Timer)
 	// Callback fired by the timer
 	sendEvent := func(we *WriteEvent) {
-		weh.EventChannel <- we
+		weh.reloadPathChan <- we.writeEvent.Name
 
 		mu.Lock()
 		delete(timers, we.writeEvent.Name)
 		mu.Unlock()
 	}
 
-	for we := range weh.EventChannel {
-		// Get timer
-		mu.Lock()
-		t, ok := timers[we.writeEvent.Name]
-		mu.Unlock()
+	for {
+		select {
+		case <-weh.ctx.Done():
+			close(weh.reloadPathChan)
 
-		// if no timer yet create one.
-		if !ok {
-			t = time.AfterFunc(math.MaxInt64, func() { sendEvent(we) })
-			t.Stop()
+		case we := <-weh.eventChannel:
+			{
+				// Get timer
+				mu.Lock()
+				t, ok := timers[we.writeEvent.Name]
+				mu.Unlock()
 
-			mu.Lock()
-			timers[we.writeEvent.Name] = t
-			mu.Unlock()
+				// if no timer yet create one.
+				if !ok {
+					t = time.AfterFunc(math.MaxInt64, func() { sendEvent(we) })
+					t.Stop()
+
+					mu.Lock()
+					timers[we.writeEvent.Name] = t
+					mu.Unlock()
+				}
+
+				// Reset the timer for this path, so it will start from 100ms again.
+				t.Reset(waitFor)
+			}
 		}
 
-		// Reset the timer for this path, so it will start from 100ms again.
-		t.Reset(waitFor)
 	}
 }

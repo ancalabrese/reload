@@ -5,15 +5,16 @@ import (
 	"fmt"
 
 	"github.com/ancalabrese/Reload/configuration"
+	"github.com/ancalabrese/Reload/data"
 	"github.com/hashicorp/go-hclog"
 )
 
 type ReloadConfig struct {
-	ctx                  context.Context
-	logger               hclog.Logger
-	errorChannel         chan<- (error)
-	configurationChannel chan<- (interface{})
-	configMonitor        *configuration.ConfigMonitor
+	ctx              context.Context
+	logger           hclog.Logger
+	errChannel       chan (error)
+	configReloadChan chan (*data.ConfigurationFile)
+	configMonitor    *configuration.ConfigMonitor
 }
 
 type Event int
@@ -29,17 +30,21 @@ func New(ctx context.Context) (*ReloadConfig, error) {
 	l := hclog.Default()
 	l.SetLevel(hclog.Debug)
 
-	configMonitor, err := configuration.GetConfigMonitorInstance(ctx)
+	errorChannel := make(chan error)
+	configReloadChan := make(chan *data.ConfigurationFile)
+
+	configMonitor, err :=
+		configuration.GetConfigMonitorInstance(ctx, configReloadChan, errorChannel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize config monitor: %w", err)
 	}
 
 	cf := &ReloadConfig{
-		logger:               l,
-		ctx:                  ctx,
-		errorChannel:         make(chan<- error),
-		configurationChannel: make(chan<- interface{}),
-		configMonitor:        configMonitor,
+		logger:           l,
+		ctx:              ctx,
+		errChannel:       errorChannel,
+		configReloadChan: configReloadChan,
+		configMonitor:    configMonitor,
 	}
 
 	return cf, nil
@@ -52,9 +57,17 @@ func (rc *ReloadConfig) AddConfiguration(path string, config interface{}) {
 	rc.configMonitor.TrackNew(path, config)
 }
 
+func (rc *ReloadConfig) GetErrChannel() <-chan (error) {
+	return rc.errChannel
+}
+
+func (rc *ReloadConfig) GetRoloadChan() <-chan (*data.ConfigurationFile) {
+	return rc.configReloadChan
+}
+
 // Close will stop the monitor and clean up resources
 func (rc *ReloadConfig) Close() {
 	rc.configMonitor.Stop()
-	close(rc.errorChannel)
-	close(rc.configurationChannel)
+	close(rc.errChannel)
+	close(rc.configReloadChan)
 }
