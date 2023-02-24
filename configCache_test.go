@@ -1,4 +1,4 @@
-package configuration
+package reload
 
 import (
 	"bufio"
@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ancalabrese/Reload/data"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,10 +58,10 @@ func TestAdd_multipleFiles_tracksFilesSeparately(t *testing.T) {
 	c1FilePath, _ = filepath.Abs(c1File.Name())
 	c2FilePath, _ = filepath.Abs(c2File.Name())
 
-	configFile1, err := data.NewConfigurationFile(c1FilePath, c1)
+	configFile1, err := NewConfigurationFile(c1FilePath, c1)
 	assert.Nil(t, err, fmt.Sprintf("%s is a valid path", c1FilePath))
 
-	configFile2, err := data.NewConfigurationFile(c2FilePath, c2)
+	configFile2, err := NewConfigurationFile(c2FilePath, c2)
 	assert.Nil(t, err, fmt.Sprintf("%s is a valid path", c2FilePath))
 
 	cache.Add(configFile1)
@@ -85,7 +84,7 @@ func TestReload_validConfiguration_noErrors(t *testing.T) {
 	c1File = createDummyConfigFile("./", c1)
 	c1FilePath, _ = filepath.Abs(c1File.Name())
 
-	configFile1, _ := data.NewConfigurationFile(c1FilePath, c1)
+	configFile1, _ := NewConfigurationFile(c1FilePath, c1)
 	cache.Add(configFile1)
 
 	newConfig := &config1{
@@ -115,7 +114,7 @@ func TestRealod_invalidConfig_errors(t *testing.T) {
 	c1File = createDummyConfigFile("./", c1)
 	c1FilePath, _ = filepath.Abs(c1File.Name())
 
-	configFile1, _ := data.NewConfigurationFile(c1FilePath, c1)
+	configFile1, _ := NewConfigurationFile(c1FilePath, c1)
 	cache.Add(configFile1)
 
 	f, _ := os.OpenFile(configFile1.FilePath, os.O_RDWR, 0777)

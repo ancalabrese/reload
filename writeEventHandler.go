@@ -1,4 +1,4 @@
-package handlers
+package reload
 
 import (
 	"context"
@@ -7,39 +7,25 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 )
-
-type WriteEvent struct {
-	writeEvent *fsnotify.Event
-}
 
 type WriteEventHandler struct {
 	ctx            context.Context
-	eventChannel   chan (*WriteEvent)
+	configCache    *ConfigCache
+	eventChannel   <-chan (*WriteEvent)
 	errChan        chan (error)
 	reloadPathChan chan (string)
-}
-
-// NewWriteEvent creates and new WriteEvent. Return errors is the
-// passed fsnotify.Event is not fsnotify.Write
-func NewWriteEvent(event fsnotify.Event) (*WriteEvent, error) {
-	if !event.Op.Has(fsnotify.Write) {
-		return nil, fmt.Errorf("event is not Write event")
-	}
-
-	return &WriteEvent{
-		writeEvent: &event,
-	}, nil
 }
 
 // NewWriteEventHandler creates a new WriteEventHandler ans starts
 // listening for new Write events.
 func NewWriteEventHandler(
 	ctx context.Context,
-	eventChannel chan (*WriteEvent)) *WriteEventHandler {
+	eventChannel <-chan (*WriteEvent)) *WriteEventHandler {
+
 	weh := &WriteEventHandler{
 		ctx:            ctx,
+		configCache:    GetCacheInstance(),
 		eventChannel:   eventChannel,
 		reloadPathChan: make(chan string),
 	}
@@ -67,12 +53,21 @@ func (weh *WriteEventHandler) handleEvents() {
 	// Traking separate timers [as path → timer] for different files
 	timers := make(map[string]*time.Timer)
 	// Callback fired by the timer
-	sendEvent := func(we *WriteEvent) {
-		weh.reloadPathChan <- we.writeEvent.Name
+	handleEventFunc := func(we *WriteEvent) {
+		cleanUpTimerFunc := func(path string) {
+			mu.Lock()
+			delete(timers, we.WriteEvent.Name)
+			mu.Unlock()
+		}
+		defer cleanUpTimerFunc(we.WriteEvent.Name)
 
-		mu.Lock()
-		delete(timers, we.writeEvent.Name)
-		mu.Unlock()
+		err := weh.configCache.Reload(we.WriteEvent.Name)
+		if err != nil {
+			weh.errChan <- fmt.Errorf("event handler error: %w", err)
+			return
+		}
+
+		weh.reloadPathChan <- we.WriteEvent.Name
 	}
 
 	for {
@@ -85,16 +80,16 @@ func (weh *WriteEventHandler) handleEvents() {
 			{
 				// Get timer
 				mu.Lock()
-				t, ok := timers[we.writeEvent.Name]
+				t, ok := timers[we.WriteEvent.Name]
 				mu.Unlock()
 
 				// if no timer yet create one.
 				if !ok {
-					t = time.AfterFunc(math.MaxInt64, func() { sendEvent(we) })
+					t = time.AfterFunc(math.MaxInt64, func() { handleEventFunc(we) })
 					t.Stop()
 
 					mu.Lock()
-					timers[we.writeEvent.Name] = t
+					timers[we.WriteEvent.Name] = t
 					mu.Unlock()
 				}
 

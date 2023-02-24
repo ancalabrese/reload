@@ -1,14 +1,12 @@
-package configuration
+package reload
 
 import (
 	"fmt"
-
-	"github.com/ancalabrese/Reload/data"
 )
 
 // ConfigCache is the internal cache of monitored files.
 type ConfigCache struct {
-	configurations map[string]*data.ConfigurationFile
+	configurations map[string]*ConfigurationFile
 }
 
 var configManager *ConfigCache
@@ -18,7 +16,7 @@ func GetCacheInstance() *ConfigCache {
 
 	if configManager == nil {
 		configManager = &ConfigCache{
-			configurations: make(map[string]*data.ConfigurationFile),
+			configurations: make(map[string]*ConfigurationFile),
 		}
 	}
 
@@ -27,7 +25,7 @@ func GetCacheInstance() *ConfigCache {
 
 // Add new files to ConfigCache.
 func (cm *ConfigCache) Add(
-	configurations ...*data.ConfigurationFile) {
+	configurations ...*ConfigurationFile) {
 	for _, c := range configurations {
 		if _, ok := cm.configurations[c.FilePath]; !ok {
 			cm.configurations[c.FilePath] = c
@@ -35,7 +33,7 @@ func (cm *ConfigCache) Add(
 	}
 }
 
-func (cm *ConfigCache) Get(path string) *data.ConfigurationFile {
+func (cm *ConfigCache) Get(path string) *ConfigurationFile {
 	return cm.configurations[path]
 }
 

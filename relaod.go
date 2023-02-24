@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ancalabrese/Reload/configuration"
-	"github.com/ancalabrese/Reload/data"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -13,8 +11,8 @@ type ReloadConfig struct {
 	ctx              context.Context
 	logger           hclog.Logger
 	errChannel       chan (error)
-	configReloadChan chan (*data.ConfigurationFile)
-	configMonitor    *configuration.ConfigMonitor
+	configReloadChan chan (*ConfigurationFile)
+	configMonitor    *Monitor
 }
 
 type Event int
@@ -31,10 +29,10 @@ func New(ctx context.Context) (*ReloadConfig, error) {
 	l.SetLevel(hclog.Debug)
 
 	errorChannel := make(chan error)
-	configReloadChan := make(chan *data.ConfigurationFile)
+	configReloadChan := make(chan *ConfigurationFile)
 
 	configMonitor, err :=
-		configuration.GetConfigMonitorInstance(ctx, configReloadChan, errorChannel)
+		GetMonitorInstance(ctx, configReloadChan, errorChannel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize config monitor: %w", err)
 	}
@@ -61,7 +59,7 @@ func (rc *ReloadConfig) GetErrChannel() <-chan (error) {
 	return rc.errChannel
 }
 
-func (rc *ReloadConfig) GetRoloadChan() <-chan (*data.ConfigurationFile) {
+func (rc *ReloadConfig) GetRoloadChan() <-chan (*ConfigurationFile) {
 	return rc.configReloadChan
 }
 

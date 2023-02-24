@@ -1,48 +1,46 @@
-package configuration
+package reload
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/ancalabrese/Reload/data"
-	"github.com/ancalabrese/Reload/handlers"
 	"github.com/fsnotify/fsnotify"
 )
 
-type ConfigMonitor struct {
+type Monitor struct {
 	ctx               context.Context
 	watcher           *fsnotify.Watcher
-	configManager     *ConfigCache
-	returnEventChan   chan<- (*data.ConfigurationFile)
+	configCache       *ConfigCache
+	returnEventChan   chan<- (*ConfigurationFile)
 	returnErrChan     chan<- (error)
 	eventChan         chan<- (fsnotify.Event)
 	errChan           chan<- (error)
-	writeEventChannel chan (*handlers.WriteEvent)
-	writeEventHandler *handlers.WriteEventHandler
+	writeEventChannel chan (*WriteEvent)
+	writeEventHandler *WriteEventHandler
 }
 
-var monitor *ConfigMonitor
+var m *Monitor
 
-// GetConfigMonitorInstance returns an singleton instance of ConfigMonitor
+// GetMonitorInstance returns an singleton instance of ConfigMonitor
 // or an error if fsnotify fails to initialize
-func GetConfigMonitorInstance(
+func GetMonitorInstance(
 	ctx context.Context,
-	eventChan chan<- (*data.ConfigurationFile),
-	errChan chan<- (error)) (*ConfigMonitor, error) {
-	if monitor == nil {
+	eventChan chan<- (*ConfigurationFile),
+	errChan chan<- (error)) (*Monitor, error) {
+	if m == nil {
 		w, err := fsnotify.NewWatcher()
 		if err != nil {
 			return nil, fmt.Errorf("error initializing config monitor: %w", err)
 		}
 
 		configManager := GetCacheInstance()
-		writeEventChannel := make(chan (*handlers.WriteEvent))
-		weh := handlers.NewWriteEventHandler(ctx, writeEventChannel)
+		writeEventChannel := make(chan (*WriteEvent))
+		weh := NewWriteEventHandler(ctx, writeEventChannel)
 
-		monitor = &ConfigMonitor{
+		m = &Monitor{
 			ctx:               ctx,
 			watcher:           w,
-			configManager:     configManager,
+			configCache:       configManager,
 			writeEventHandler: weh,
 			returnEventChan:   eventChan,
 			returnErrChan:     errChan,
@@ -51,15 +49,15 @@ func GetConfigMonitorInstance(
 			errChan:           make(chan<- error),
 		}
 
-		go monitor.monitorUp()
+		go m.monitorUp()
 	}
 
-	return monitor, nil
+	return m, nil
 }
 
 // TrackNew adds the file path to the monitored paths
-func (cm *ConfigMonitor) TrackNew(path string, config interface{}) error {
-	c, err := data.NewConfigurationFile(path, config)
+func (cm *Monitor) TrackNew(path string, config interface{}) error {
+	c, err := NewConfigurationFile(path, config)
 	if err != nil {
 		return err
 	}
@@ -69,28 +67,28 @@ func (cm *ConfigMonitor) TrackNew(path string, config interface{}) error {
 		return fmt.Errorf("error adding new resource %s to monitor: %w", path, err)
 	}
 
-	cm.configManager.Add(c)
+	cm.configCache.Add(c)
 
 	return nil
 }
 
 // Untrack removes a path from the monitored files
-func (cm *ConfigMonitor) Untrack(path string) {
+func (cm *Monitor) Untrack(path string) {
 	cm.watcher.Remove(path)
-	cm.configManager.Remove(path)
+	cm.configCache.Remove(path)
 }
 
 // Stop monitoring files and close channels
-func (cm *ConfigMonitor) Stop() {
+func (cm *Monitor) Stop() {
 	cm.watcher.Close()
 	close(cm.eventChan)
 	close(cm.errChan)
-	monitor = nil
+	m = nil
 }
 
 // monitorUp starts listening for events.
 // When an event is received it is redirected to the correct event handler
-func (cm *ConfigMonitor) monitorUp() {
+func (cm *Monitor) monitorUp() {
 	for {
 		select {
 		case <-cm.ctx.Done():
@@ -99,21 +97,15 @@ func (cm *ConfigMonitor) monitorUp() {
 
 		case event := <-cm.watcher.Events:
 			if event.Op.Has(fsnotify.Write) {
-				writeEvent, _ := handlers.NewWriteEvent(event)
+				writeEvent, _ := NewWriteEvent(event)
 				cm.writeEventChannel <- writeEvent
 			}
 
 		case path := <-cm.writeEventHandler.GetRelaodChan():
-			err := cm.configManager.Reload(path)
-			if err != nil {
-				cm.returnErrChan <- fmt.Errorf(
-					"error reloading config %s : %w", path, err)
-				continue
-			}
-			cm.returnEventChan <- cm.configManager.Get(path)
+			cm.returnEventChan <- cm.configCache.Get(path)
 
 		case err := <-cm.writeEventHandler.GetErrChan():
-			//Send any error back to the caller
+			//Send any error back to the caller.
 			cm.errChan <- err
 		}
 	}

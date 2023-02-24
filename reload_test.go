@@ -10,10 +10,6 @@ type TestConfig struct {
 	Config3 int    `json:"config3"`
 }
 
-const (
-	testFilePath = "~/testConfig.json"
-)
-
 var (
 	testConfig = &TestConfig{}
 )
