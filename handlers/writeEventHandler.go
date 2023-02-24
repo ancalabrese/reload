@@ -33,8 +33,8 @@ func NewWriteEvent(event fsnotify.Event) (*WriteEvent, error) {
 	}, nil
 }
 
-// NewWriteEventHandler creates a new WriteEvent handler ans starts
-// listening for new Write events
+// NewWriteEventHandler creates a new WriteEventHandler ans starts
+// listening for new Write events.
 func NewWriteEventHandler(
 	ctx context.Context,
 	eventChannel chan (*WriteEvent)) *WriteEventHandler {
@@ -79,6 +79,7 @@ func (weh *WriteEventHandler) handleEvents() {
 		select {
 		case <-weh.ctx.Done():
 			close(weh.reloadPathChan)
+			return
 
 		case we := <-weh.eventChannel:
 			{
@@ -101,6 +102,5 @@ func (weh *WriteEventHandler) handleEvents() {
 				t.Reset(waitFor)
 			}
 		}
-
 	}
 }
