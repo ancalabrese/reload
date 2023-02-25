@@ -1,4 +1,4 @@
-package reload
+package reload_test
 
 import (
 	"testing"
@@ -16,5 +16,5 @@ var (
 
 func TestNewConfigurationFile(t *testing.T) {
 	// configFile, err := NewConfigurationFile(testFilePath, testConfig)
-	
+
 }

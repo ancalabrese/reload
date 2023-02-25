@@ -3,6 +3,7 @@ package reload
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -62,18 +63,24 @@ func (cm *Monitor) TrackNew(path string, config interface{}) error {
 		return err
 	}
 
-	err = cm.watcher.Add(path)
+	err = cm.watcher.Add(c.FilePath)
 	if err != nil {
-		return fmt.Errorf("error adding new resource %s to monitor: %w", path, err)
+		return fmt.Errorf(
+			"error adding new resource %s to monitor: %w",
+			c.FilePath,
+			err)
 	}
 
 	cm.configCache.Add(c)
-
 	return nil
 }
 
 // Untrack removes a path from the monitored files
 func (cm *Monitor) Untrack(path string) {
+	if !filepath.IsAbs(path) {
+		path, _ = filepath.Abs(path)
+	}
+
 	cm.watcher.Remove(path)
 	cm.configCache.Remove(path)
 }

@@ -1,28 +1,69 @@
-package reload
+package reload_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
+	reload "github.com/ancalabrese/Reload"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetMonitorInstance_noErrors(t *testing.T) {
-	mi, err := GetMonitorInstance(
+	_, err := reload.GetMonitorInstance(
 		context.Background(),
-		make(chan<- *ConfigurationFile),
+		make(chan<- *reload.ConfigurationFile),
 		make(chan<- error))
 
 	assert.NoError(t, err, "Error should be nil")
+}
 
-	assert.NotNil(t, mi.watcher, "watcher is nil")
-	assert.Empty(
-		t,
-		mi.configCache.configurations,
-		"Config monitor tracking cache is not empty")
+func TestMonitor_trackNewValidPath_noError(t *testing.T) {
+	m, _ := reload.GetMonitorInstance(
+		context.Background(),
+		make(chan<- *reload.ConfigurationFile),
+		make(chan<- error))
+	configManager := reload.GetCacheInstance()
 
-	assert.NotNil(t, mi.eventChan, "eventChan is nil")
-	assert.NotNil(t, mi.errChan, "errChan is nil")
-	assert.NotNil(t, mi.writeEventHandler, "writeEventHandler is nil")
+	f, _ := os.CreateTemp("./", "*.json")
+	defer f.Close()
 
+	err := m.TrackNew(f.Name(), nil)
+	assert.Nil(t, err, "TrackNew returned error")
+
+	c := configManager.Get(f.Name())
+	assert.NotNil(t, c, "Tracking file cache not updated")
+
+	os.Remove(f.Name())
+}
+
+func TestMonitor_trackNewInvalidPath_error(t *testing.T) {
+	m, _ := reload.GetMonitorInstance(
+		context.Background(),
+		make(chan<- *reload.ConfigurationFile),
+		make(chan<- error))
+
+	err := m.TrackNew("./invalid.json", nil)
+	assert.NotNil(t, err, "TrackNew returned error")
+}
+
+func TestMonitor_untrackFile_fileRemovedFromCache(t *testing.T) {
+	m, _ := reload.GetMonitorInstance(
+		context.Background(),
+		make(chan<- *reload.ConfigurationFile),
+		make(chan<- error))
+	configManager := reload.GetCacheInstance()
+
+	f, _ := os.CreateTemp("./", "*.json")
+	defer f.Close()
+
+	_ = m.TrackNew(f.Name(), nil)
+	c := configManager.Get(f.Name())
+	assert.NotNil(t, c, "Tracking file cache not updated")
+
+	m.Untrack(f.Name())
+	c = configManager.Get(f.Name())
+	assert.Nil(t, c, "Tracking file still in cache after untracking")
+
+	os.Remove(f.Name())
 }

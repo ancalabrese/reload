@@ -1,4 +1,4 @@
-package reload
+package reload_test
 
 import (
 	"bufio"
@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
+	reload "github.com/ancalabrese/Reload"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +28,7 @@ type config2 struct {
 }
 
 var (
-	cache *ConfigCache
+	cache *reload.ConfigCache
 	c1    = &config1{
 		Disabled: true,
 		Port:     "5050",
@@ -43,25 +46,25 @@ var (
 )
 
 func TestGetChaceInstance_multipleCalls_returnsSameInstance(t *testing.T) {
-	cache = GetCacheInstance()
+	cache = reload.GetCacheInstance()
 	assert.NotNil(t, cache, "Cache should not be nil")
 
-	cache2 := GetCacheInstance()
+	cache2 := reload.GetCacheInstance()
 	assert.NotNil(t, cache2, "Cache should not be nil")
 	assert.Equal(t, cache2, cache, "Cache should be a singleton instnace")
 }
 
 func TestAdd_multipleFiles_tracksFilesSeparately(t *testing.T) {
-	cache = GetCacheInstance()
+	cache = reload.GetCacheInstance()
 	c1File = createDummyConfigFile("./", c1)
 	c2File = createDummyConfigFile("./", c2)
 	c1FilePath, _ = filepath.Abs(c1File.Name())
 	c2FilePath, _ = filepath.Abs(c2File.Name())
 
-	configFile1, err := NewConfigurationFile(c1FilePath, c1)
+	configFile1, err := reload.NewConfigurationFile(c1FilePath, c1)
 	assert.Nil(t, err, fmt.Sprintf("%s is a valid path", c1FilePath))
 
-	configFile2, err := NewConfigurationFile(c2FilePath, c2)
+	configFile2, err := reload.NewConfigurationFile(c2FilePath, c2)
 	assert.Nil(t, err, fmt.Sprintf("%s is a valid path", c2FilePath))
 
 	cache.Add(configFile1)
@@ -80,11 +83,11 @@ func TestAdd_multipleFiles_tracksFilesSeparately(t *testing.T) {
 }
 
 func TestReload_validConfiguration_noErrors(t *testing.T) {
-	cache = GetCacheInstance()
+	cache = reload.GetCacheInstance()
 	c1File = createDummyConfigFile("./", c1)
 	c1FilePath, _ = filepath.Abs(c1File.Name())
 
-	configFile1, _ := NewConfigurationFile(c1FilePath, c1)
+	configFile1, _ := reload.NewConfigurationFile(c1FilePath, c1)
 	cache.Add(configFile1)
 
 	newConfig := &config1{
@@ -103,18 +106,17 @@ func TestReload_validConfiguration_noErrors(t *testing.T) {
 	assert.Equal(
 		t,
 		newConfig,
-		cache.configurations[configFile1.FilePath].Config,
+		cache.Get(configFile1.FilePath).Config,
 		"Cached configuration didn't match updated config version")
 
 	deleteDummyConfigFile(c1FilePath)
 }
 
 func TestRealod_invalidConfig_errors(t *testing.T) {
-	cache = GetCacheInstance()
+	cache = reload.GetCacheInstance()
 	c1File = createDummyConfigFile("./", c1)
-	c1FilePath, _ = filepath.Abs(c1File.Name())
 
-	configFile1, _ := NewConfigurationFile(c1FilePath, c1)
+	configFile1, _ := reload.NewConfigurationFile(c1File.Name(), c1)
 	cache.Add(configFile1)
 
 	f, _ := os.OpenFile(configFile1.FilePath, os.O_RDWR, 0777)
@@ -122,21 +124,25 @@ func TestRealod_invalidConfig_errors(t *testing.T) {
 
 	var txt string
 	scanner := bufio.NewScanner(f)
+	// Find and integer value configuration and swap it for a string
 	for scanner.Scan() {
 		line := scanner.Text()
-		txt += strings.ReplaceAll(line, "99", "\"x\"")
+		txt += strings.ReplaceAll(
+			line,
+			strconv.Itoa(cache.Get(configFile1.FilePath).Config.(*config1).Timeout),
+			"\"x\"")
 	}
 	f.Truncate(0)
 	f.Seek(0, 0)
 	f.WriteString(txt)
-
+	time.Sleep(100 * time.Millisecond)
 	err := cache.Reload(f.Name())
 	assert.NotNil(
 		t,
 		err,
 		"Reloading an invalid json configuration should return an error")
 
-	deleteDummyConfigFile(c1FilePath)
+	deleteDummyConfigFile(c1File.Name())
 }
 
 func createDummyConfigFile(path string, config interface{}) *os.File {
