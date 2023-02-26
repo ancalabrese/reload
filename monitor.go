@@ -9,15 +9,10 @@ import (
 )
 
 type Monitor struct {
-	ctx               context.Context
-	watcher           *fsnotify.Watcher
-	configCache       *ConfigCache
-	returnEventChan   chan<- (*ConfigurationFile)
-	returnErrChan     chan<- (error)
-	eventChan         chan<- (fsnotify.Event)
-	errChan           chan<- (error)
-	writeEventChannel chan (*WriteEvent)
-	writeEventHandler *WriteEventHandler
+	ctx           context.Context
+	watcher       *fsnotify.Watcher
+	configCache   *ConfigCache
+	eventHandlers []eventHandler
 }
 
 // NewMonitor initiate a new Monitor
@@ -25,28 +20,22 @@ func NewMonitor(
 	ctx context.Context,
 	eventChan chan<- (*ConfigurationFile),
 	errChan chan<- (error)) (*Monitor, error) {
-	w, err := fsnotify.NewWatcher()
+	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("error initializing config monitor: %w", err)
 	}
 
-	configManager := GetCacheInstance()
-	writeEventChannel := make(chan (*WriteEvent))
-	weh := NewWriteEventHandler(ctx, writeEventChannel)
-
-	m := &Monitor{
-		ctx:               ctx,
-		watcher:           w,
-		configCache:       configManager,
-		writeEventHandler: weh,
-		returnEventChan:   eventChan,
-		returnErrChan:     errChan,
-		writeEventChannel: writeEventChannel,
-		eventChan:         make(chan<- fsnotify.Event),
-		errChan:           make(chan<- error),
+	configChace := GetCacheInstance()
+	eventHandlers := []eventHandler{
+		NewWriteEventHandler(ctx, fsWatcher.Events),
 	}
 
-	go m.monitorUp()
+	m := &Monitor{
+		ctx:           ctx,
+		watcher:       fsWatcher,
+		configCache:   configChace,
+		eventHandlers: eventHandlers,
+	}
 
 	return m, nil
 }
@@ -83,31 +72,4 @@ func (cm *Monitor) Untrack(path string) {
 // Stop monitoring files and close channels
 func (cm *Monitor) Stop() {
 	cm.watcher.Close()
-	close(cm.eventChan)
-	close(cm.errChan)
-}
-
-// monitorUp starts listening for events.
-// When an event is received it is redirected to the correct event handler
-func (cm *Monitor) monitorUp() {
-	for {
-		select {
-		case <-cm.ctx.Done():
-			cm.Stop()
-			return
-
-		case event := <-cm.watcher.Events:
-			if event.Op.Has(fsnotify.Write) {
-				writeEvent, _ := NewWriteEvent(event)
-				cm.writeEventChannel <- writeEvent
-			}
-
-		case path := <-cm.writeEventHandler.GetRelaodChan():
-			cm.returnEventChan <- cm.configCache.Get(path)
-
-		case err := <-cm.writeEventHandler.GetErrChan():
-			//Send any error back to the caller.
-			cm.errChan <- err
-		}
-	}
 }
