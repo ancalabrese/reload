@@ -9,17 +9,19 @@ import (
 )
 
 type Monitor struct {
-	ctx           context.Context
-	watcher       *fsnotify.Watcher
-	configCache   *ConfigCache
-	eventHandlers []eventHandler
+	ctx              context.Context
+	watcher          *fsnotify.Watcher
+	configCache      *ConfigCache
+	eventHandlers    []eventHandler
+	returnConfigChan <-chan (*ConfigurationFile)
+	returnErrChan    <-chan (error)
 }
 
 // NewMonitor initiate a new Monitor
 func NewMonitor(
 	ctx context.Context,
-	eventChan chan<- (*ConfigurationFile),
-	errChan chan<- (error)) (*Monitor, error) {
+	eventChan <-chan (*ConfigurationFile),
+	errChan <-chan (error)) (*Monitor, error) {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("error initializing config monitor: %w", err)
@@ -31,10 +33,12 @@ func NewMonitor(
 	}
 
 	m := &Monitor{
-		ctx:           ctx,
-		watcher:       fsWatcher,
-		configCache:   configChace,
-		eventHandlers: eventHandlers,
+		ctx:              ctx,
+		watcher:          fsWatcher,
+		configCache:      configChace,
+		eventHandlers:    eventHandlers,
+		returnConfigChan: eventChan,
+		returnErrChan:    errChan,
 	}
 
 	return m, nil

@@ -12,8 +12,8 @@ import (
 func TestGetMonitorInstance_noErrors(t *testing.T) {
 	_, err := reload.NewMonitor(
 		context.Background(),
-		make(chan<- *reload.ConfigurationFile),
-		make(chan<- error))
+		make(<-chan *reload.ConfigurationFile),
+		make(<-chan error))
 
 	assert.NoError(t, err, "Error should be nil")
 }
@@ -21,8 +21,8 @@ func TestGetMonitorInstance_noErrors(t *testing.T) {
 func TestMonitor_trackNewValidPath_noError(t *testing.T) {
 	m, _ := reload.NewMonitor(
 		context.Background(),
-		make(chan<- *reload.ConfigurationFile),
-		make(chan<- error))
+		make(<-chan *reload.ConfigurationFile),
+		make(<-chan error))
 	configManager := reload.GetCacheInstance()
 
 	f, _ := os.CreateTemp("./", "*.json")
@@ -40,8 +40,8 @@ func TestMonitor_trackNewValidPath_noError(t *testing.T) {
 func TestMonitor_trackNewInvalidPath_error(t *testing.T) {
 	m, _ := reload.NewMonitor(
 		context.Background(),
-		make(chan<- *reload.ConfigurationFile),
-		make(chan<- error))
+		make(<-chan *reload.ConfigurationFile),
+		make(<-chan error))
 
 	err := m.TrackNew("./invalid.json", nil)
 	assert.NotNil(t, err, "TrackNew returned error")
@@ -50,8 +50,8 @@ func TestMonitor_trackNewInvalidPath_error(t *testing.T) {
 func TestMonitor_untrackFile_fileRemovedFromCache(t *testing.T) {
 	m, _ := reload.NewMonitor(
 		context.Background(),
-		make(chan<- *reload.ConfigurationFile),
-		make(chan<- error))
+		make(<-chan *reload.ConfigurationFile),
+		make(<-chan error))
 	configManager := reload.GetCacheInstance()
 
 	f, _ := os.CreateTemp("./", "*.json")
@@ -67,3 +67,5 @@ func TestMonitor_untrackFile_fileRemovedFromCache(t *testing.T) {
 
 	os.Remove(f.Name())
 }
+
+func TestMonitor_stopMonitor_noEvents(t *testing.T){}
