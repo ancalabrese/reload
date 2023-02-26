@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"time"
 
 	reload "github.com/ancalabrese/Reload"
+	"github.com/hashicorp/go-hclog"
 )
 
 type Config struct {
@@ -19,9 +19,20 @@ var config *Config
 func main() {
 	ctx := context.Background()
 	config = &Config{}
-	reloadConfig, _ := reload.New(ctx)
+	l := hclog.Default()
+	rc, _ := reload.New(ctx)
 
-	reloadConfig.AddConfiguration("config.json", config)
+	rc.AddConfiguration("config.json", config)
 
-	time.Sleep(1000 * time.Second)
+	l.Info("Update any value in ./config.json to receive new configurations")
+
+	for {
+		select {
+		case err := <-rc.GetErrChannel():
+			l.Error("Receive", "err", err)
+		case conf := <-rc.GetRoloadChan():
+			l.Info("Received", "config ", conf.FilePath, " updated:", conf.Config.(Config))
+		}
+
+	}
 }
