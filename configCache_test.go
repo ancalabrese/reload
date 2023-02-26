@@ -85,7 +85,7 @@ func TestAdd_multipleFiles_tracksFilesSeparately(t *testing.T) {
 func TestReload_validConfiguration_noErrors(t *testing.T) {
 	cache = reload.GetCacheInstance()
 	c1File = createDummyConfigFile("./", c1)
-	c1FilePath, _ = filepath.Abs(c1File.Name())
+	c1FilePath = c1File.Name()
 
 	configFile1, _ := reload.NewConfigurationFile(c1FilePath, c1)
 	cache.Add(configFile1)
@@ -102,12 +102,15 @@ func TestReload_validConfiguration_noErrors(t *testing.T) {
 
 	json.NewEncoder(f).Encode(newConfig)
 
-	cache.Reload(f.Name())
-	assert.Equal(
-		t,
-		newConfig,
-		cache.Get(configFile1.FilePath).Config,
-		"Cached configuration didn't match updated config version")
+	go cache.Reload(f.Name())
+	for configFile := range cache.GetOnReload() {
+		assert.Equal(
+			t,
+			newConfig,
+			configFile.Config,
+			"Cached configuration didn't match updated config version")
+		break
+	}
 
 	deleteDummyConfigFile(c1FilePath)
 }
@@ -136,11 +139,15 @@ func TestRealod_invalidConfig_errors(t *testing.T) {
 	f.Seek(0, 0)
 	f.WriteString(txt)
 	time.Sleep(100 * time.Millisecond)
-	err := cache.Reload(f.Name())
-	assert.NotNil(
-		t,
-		err,
-		"Reloading an invalid json configuration should return an error")
+	
+	go cache.Reload(f.Name())
+	for err := range cache.GetError() {
+		assert.NotNil(
+			t,
+			err,
+			"Wrong config didn't error")
+		break
+	}
 
 	deleteDummyConfigFile(c1File.Name())
 }

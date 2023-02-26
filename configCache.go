@@ -9,6 +9,8 @@ import (
 // ConfigCache is the internal cache of monitored files.
 type ConfigCache struct {
 	configurations map[string]*ConfigurationFile
+	onReloadChan   chan (*ConfigurationFile)
+	onErrorChan    chan (error)
 }
 
 var configManager *ConfigCache
@@ -23,6 +25,8 @@ func GetCacheInstance() *ConfigCache {
 		if configManager == nil { // Once locked check instance is still nil
 			configManager = &ConfigCache{
 				configurations: make(map[string]*ConfigurationFile),
+				onReloadChan:   make(chan *ConfigurationFile),
+				onErrorChan:    make(chan error),
 			}
 		}
 	}
@@ -58,14 +62,24 @@ func (cm *ConfigCache) Remove(path string) {
 
 // Reload reads the config file and updates the
 // cached configuration files
-func (cm *ConfigCache) Reload(path string) error {
+func (cm *ConfigCache) Reload(path string) {
 	if !filepath.IsAbs(path) {
 		path, _ = filepath.Abs(path)
 	}
 
 	err := cm.Get(path).LoadConfiguration()
 	if err != nil {
-		return fmt.Errorf("error loading new config: %w", err)
+		err = fmt.Errorf("error loading new config: %w", err)
+		cm.onErrorChan <- err
 	}
-	return nil
+
+	cm.onReloadChan <- cm.Get(path)
+}
+
+func (cm *ConfigCache) GetOnReload() <-chan (*ConfigurationFile) {
+	return cm.onReloadChan
+}
+
+func (cm *ConfigCache) GetError() <-chan (error) {
+	return cm.onErrorChan
 }
