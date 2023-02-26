@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetMonitorInstance_noErrors(t *testing.T) {
-	_, err := reload.GetMonitorInstance(
+	_, err := reload.NewMonitor(
 		context.Background(),
 		make(chan<- *reload.ConfigurationFile),
 		make(chan<- error))
@@ -19,7 +19,7 @@ func TestGetMonitorInstance_noErrors(t *testing.T) {
 }
 
 func TestMonitor_trackNewValidPath_noError(t *testing.T) {
-	m, _ := reload.GetMonitorInstance(
+	m, _ := reload.NewMonitor(
 		context.Background(),
 		make(chan<- *reload.ConfigurationFile),
 		make(chan<- error))
@@ -38,7 +38,7 @@ func TestMonitor_trackNewValidPath_noError(t *testing.T) {
 }
 
 func TestMonitor_trackNewInvalidPath_error(t *testing.T) {
-	m, _ := reload.GetMonitorInstance(
+	m, _ := reload.NewMonitor(
 		context.Background(),
 		make(chan<- *reload.ConfigurationFile),
 		make(chan<- error))
@@ -48,7 +48,7 @@ func TestMonitor_trackNewInvalidPath_error(t *testing.T) {
 }
 
 func TestMonitor_untrackFile_fileRemovedFromCache(t *testing.T) {
-	m, _ := reload.GetMonitorInstance(
+	m, _ := reload.NewMonitor(
 		context.Background(),
 		make(chan<- *reload.ConfigurationFile),
 		make(chan<- error))

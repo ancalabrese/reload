@@ -20,38 +20,33 @@ type Monitor struct {
 	writeEventHandler *WriteEventHandler
 }
 
-var m *Monitor
-
-// GetMonitorInstance returns an singleton instance of ConfigMonitor
-// or an error if fsnotify fails to initialize
-func GetMonitorInstance(
+// NewMonitor initiate a new Monitor
+func NewMonitor(
 	ctx context.Context,
 	eventChan chan<- (*ConfigurationFile),
 	errChan chan<- (error)) (*Monitor, error) {
-	if m == nil {
-		w, err := fsnotify.NewWatcher()
-		if err != nil {
-			return nil, fmt.Errorf("error initializing config monitor: %w", err)
-		}
-
-		configManager := GetCacheInstance()
-		writeEventChannel := make(chan (*WriteEvent))
-		weh := NewWriteEventHandler(ctx, writeEventChannel)
-
-		m = &Monitor{
-			ctx:               ctx,
-			watcher:           w,
-			configCache:       configManager,
-			writeEventHandler: weh,
-			returnEventChan:   eventChan,
-			returnErrChan:     errChan,
-			writeEventChannel: writeEventChannel,
-			eventChan:         make(chan<- fsnotify.Event),
-			errChan:           make(chan<- error),
-		}
-
-		go m.monitorUp()
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, fmt.Errorf("error initializing config monitor: %w", err)
 	}
+
+	configManager := GetCacheInstance()
+	writeEventChannel := make(chan (*WriteEvent))
+	weh := NewWriteEventHandler(ctx, writeEventChannel)
+
+	m := &Monitor{
+		ctx:               ctx,
+		watcher:           w,
+		configCache:       configManager,
+		writeEventHandler: weh,
+		returnEventChan:   eventChan,
+		returnErrChan:     errChan,
+		writeEventChannel: writeEventChannel,
+		eventChan:         make(chan<- fsnotify.Event),
+		errChan:           make(chan<- error),
+	}
+
+	go m.monitorUp()
 
 	return m, nil
 }
@@ -90,7 +85,6 @@ func (cm *Monitor) Stop() {
 	cm.watcher.Close()
 	close(cm.eventChan)
 	close(cm.errChan)
-	m = nil
 }
 
 // monitorUp starts listening for events.

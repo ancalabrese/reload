@@ -32,7 +32,7 @@ func New(ctx context.Context) (*ReloadConfig, error) {
 	configReloadChan := make(chan *ConfigurationFile)
 
 	configMonitor, err :=
-		GetMonitorInstance(ctx, configReloadChan, errorChannel)
+		NewMonitor(ctx, configReloadChan, errorChannel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize config monitor: %w", err)
 	}
