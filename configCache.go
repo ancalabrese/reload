@@ -3,6 +3,7 @@ package reload
 import (
 	"fmt"
 	"path/filepath"
+	"sync"
 )
 
 // ConfigCache is the internal cache of monitored files.
@@ -11,13 +12,18 @@ type ConfigCache struct {
 }
 
 var configManager *ConfigCache
+var lock = &sync.Mutex{}
 
 // GetCacheInstance get a singleton instance ConfigCache
 func GetCacheInstance() *ConfigCache {
 
 	if configManager == nil {
-		configManager = &ConfigCache{
-			configurations: make(map[string]*ConfigurationFile),
+		lock.Lock()
+		defer lock.Unlock()
+		if configManager == nil { // Once locked check instance is still nil
+			configManager = &ConfigCache{
+				configurations: make(map[string]*ConfigurationFile),
+			}
 		}
 	}
 
@@ -38,7 +44,7 @@ func (cm *ConfigCache) Get(path string) *ConfigurationFile {
 	if !filepath.IsAbs(path) {
 		path, _ = filepath.Abs(path)
 	}
-	
+
 	return cm.configurations[path]
 }
 
