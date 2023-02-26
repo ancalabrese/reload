@@ -29,10 +29,9 @@ func main() {
 	for {
 		select {
 		case err := <-rc.GetErrChannel():
-			l.Error("Receive", "err", err)
+			l.Error("Received", "err", err)
 		case conf := <-rc.GetRoloadChan():
-			l.Info("Received", "config ", conf.FilePath, " updated:", conf.Config.(Config))
+			l.Info("Received", "config", conf.FilePath, " updated:", conf.Config)
 		}
-
 	}
 }

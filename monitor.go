@@ -13,15 +13,13 @@ type Monitor struct {
 	watcher          *fsnotify.Watcher
 	configCache      *ConfigCache
 	eventHandlers    []eventHandler
-	returnConfigChan <-chan (*ConfigurationFile)
-	returnErrChan    <-chan (error)
+	returnConfigChan chan (*ConfigurationFile)
+	returnErrChan    chan (error)
 }
 
 // NewMonitor initiate a new Monitor
 func NewMonitor(
-	ctx context.Context,
-	eventChan <-chan (*ConfigurationFile),
-	errChan <-chan (error)) (*Monitor, error) {
+	ctx context.Context) (*Monitor, error) {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("error initializing config monitor: %w", err)
@@ -37,9 +35,11 @@ func NewMonitor(
 		watcher:          fsWatcher,
 		configCache:      configChace,
 		eventHandlers:    eventHandlers,
-		returnConfigChan: eventChan,
-		returnErrChan:    errChan,
+		returnConfigChan: make(chan *ConfigurationFile),
+		returnErrChan:    make(chan error),
 	}
+
+	go m.monitorUp()
 
 	return m, nil
 }
@@ -76,4 +76,23 @@ func (cm *Monitor) Untrack(path string) {
 // Stop monitoring files and close channels
 func (cm *Monitor) Stop() {
 	cm.watcher.Close()
+}
+
+func (m *Monitor) GetNewConfiguration() <-chan (*ConfigurationFile) {
+	return m.returnConfigChan
+}
+
+func (m *Monitor) GetNewConfigurationError() <-chan (error) {
+	return m.returnErrChan
+}
+
+func (m *Monitor) monitorUp() {
+	for {
+		select {
+		case config := <-m.configCache.GetOnReload():
+			m.returnConfigChan <- config
+		case err := <-m.configCache.GetError():
+			m.returnErrChan <- err
+		}
+	}
 }

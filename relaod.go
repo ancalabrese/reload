@@ -8,11 +8,9 @@ import (
 )
 
 type ReloadConfig struct {
-	ctx              context.Context
-	logger           hclog.Logger
-	errChannel       chan (error)
-	configReloadChan chan (*ConfigurationFile)
-	configMonitor    *Monitor
+	ctx           context.Context
+	logger        hclog.Logger
+	configMonitor *Monitor
 }
 
 type Event int
@@ -28,21 +26,16 @@ func New(ctx context.Context) (*ReloadConfig, error) {
 	l := hclog.Default()
 	l.SetLevel(hclog.Debug)
 
-	errorChannel := make(chan error)
-	configReloadChan := make(chan *ConfigurationFile)
-
 	configMonitor, err :=
-		NewMonitor(ctx, configReloadChan, errorChannel)
+		NewMonitor(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize config monitor: %w", err)
 	}
 
 	cf := &ReloadConfig{
-		logger:           l,
-		ctx:              ctx,
-		errChannel:       errorChannel,
-		configReloadChan: configReloadChan,
-		configMonitor:    configMonitor,
+		logger:        l,
+		ctx:           ctx,
+		configMonitor: configMonitor,
 	}
 
 	return cf, nil
@@ -56,16 +49,14 @@ func (rc *ReloadConfig) AddConfiguration(path string, config interface{}) {
 }
 
 func (rc *ReloadConfig) GetErrChannel() <-chan (error) {
-	return rc.errChannel
+	return rc.configMonitor.returnErrChan
 }
 
 func (rc *ReloadConfig) GetRoloadChan() <-chan (*ConfigurationFile) {
-	return rc.configReloadChan
+	return rc.configMonitor.returnConfigChan
 }
 
 // Close will stop the monitor and clean up resources
 func (rc *ReloadConfig) Close() {
 	rc.configMonitor.Stop()
-	close(rc.errChannel)
-	close(rc.configReloadChan)
 }
