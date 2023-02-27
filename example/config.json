@@ -1,6 +1,6 @@
 {
-  "disabled": false,
+  "disabled": true,
   "port": "8080",
   "address": "https://localhost",
-  "opTimeout": 14
+  "opTimeout": 10
 }

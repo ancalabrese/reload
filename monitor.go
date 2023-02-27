@@ -89,6 +89,8 @@ func (m *Monitor) GetNewConfigurationError() <-chan (error) {
 func (m *Monitor) monitorUp() {
 	for {
 		select {
+		case <-m.ctx.Done():
+			m.Stop()
 		case config := <-m.configCache.GetOnReload():
 			m.returnConfigChan <- config
 		case err := <-m.configCache.GetError():
