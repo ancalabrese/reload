@@ -44,8 +44,8 @@ func New(ctx context.Context) (*ReloadConfig, error) {
 // AddConfiguration adds a new config file to the monitor.
 // path is the file path
 // config is a json tagged struct where the config file will be marshalled into
-func (rc *ReloadConfig) AddConfiguration(path string, config interface{}) {
-	rc.configMonitor.TrackNew(path, config)
+func (rc *ReloadConfig) AddConfiguration(path string, config interface{}) error {
+	return rc.configMonitor.TrackNew(path, config)
 }
 
 func (rc *ReloadConfig) GetErrChannel() <-chan (error) {
