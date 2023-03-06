@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"log"
 
 	reload "github.com/ancalabrese/Reload"
-	"github.com/hashicorp/go-hclog"
 )
 
 type Config struct {
@@ -27,25 +27,20 @@ func main() {
 	config = &Config{}
 	config2 := &Config2{}
 
-	l := hclog.Default()
-	l.SetLevel(hclog.Debug)
 	rc, _ := reload.New(ctx)
 
 	rc.AddConfiguration("./config.json", config)
 	rc.AddConfiguration("./config2.json", config2)
 
-	l.Info("Update any value in ./config.json or ./config2.json to" +
+	log.Println("Update any value in ./config.json or ./config2.json to" +
 		"receive new configurations")
-	
+
 	for {
 		select {
 		case err := <-rc.GetErrChannel():
-			l.Error("Received", "err", err)
+			log.Println("Received err: %w", err)
 		case conf := <-rc.GetRoloadChan():
-			if conf != nil {
-				panic(conf)
-			}
-			l.Debug("Received", "config", conf.FilePath, " updated:", conf.Config)
+			log.Println("Received new config [", conf.FilePath, "]:", conf.Config)
 		}
 	}
 }
