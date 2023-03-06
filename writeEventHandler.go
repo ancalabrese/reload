@@ -28,15 +28,14 @@ func NewWriteEventHandler(
 		configCache: GetCacheInstance(),
 	}
 
-	go weh.getEvents(eventChannel)
+	go weh.handleEvent(eventChannel)
 	return weh
 }
 
-// getEvents listens for new fsnotify.Write events sent via eventCh.
+// handleEvent handles any fsnotify.Write events.
 // Write events might come in bursts, so it listens until no more events
-// are received for the same file, then it calls handle event to
-// handle it.
-func (weh *WriteEventHandler) getEvents(eventCh <-chan (fsnotify.Event)) {
+// are received for the same file, then it attempts to reload the config file.
+func (weh *WriteEventHandler) handleEvent(eventCh <-chan (fsnotify.Event)) {
 	// Wait 100ms for new events; each new event resets the timer.
 	waitFor := 100 * time.Millisecond
 	var mu sync.Mutex
@@ -66,7 +65,7 @@ func (weh *WriteEventHandler) getEvents(eventCh <-chan (fsnotify.Event)) {
 				if !ok {
 					t = time.AfterFunc(math.MaxInt64, func() {
 						defer cleanUpTimerFunc(event.Name)
-						weh.handleEvent(event)
+						weh.configCache.Reload(event.Name)
 					})
 					t.Stop()
 
@@ -82,9 +81,4 @@ func (weh *WriteEventHandler) getEvents(eventCh <-chan (fsnotify.Event)) {
 			return
 		}
 	}
-}
-
-// handleEvent reload attempts to reload the the config file
-func (weh *WriteEventHandler) handleEvent(event fsnotify.Event) {
-	weh.configCache.Reload(event.Name)
 }
