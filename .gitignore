@@ -11,8 +11,5 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Example configuration files (avoid pushing changes for new tests)
-example/config*.json
-
 # Dependency directories (remove the comment below to include it)
 # vendor/
