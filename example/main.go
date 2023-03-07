@@ -33,7 +33,7 @@ func main() {
 	rc.AddConfiguration("./config2.json", config2)
 
 	log.Println("Update any value in ./config.json or ./config2.json to" +
-		"receive new configurations")
+		" receive new configurations")
 
 	for {
 		select {
