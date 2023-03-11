@@ -3,6 +3,7 @@ package reload
 import (
 	"context"
 	"fmt"
+	"log"
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
@@ -18,8 +19,7 @@ type Monitor struct {
 }
 
 // NewMonitor initiate a new Monitor
-func NewMonitor(
-	ctx context.Context) (*Monitor, error) {
+func NewMonitor(ctx context.Context) (*Monitor, error) {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("error initializing config monitor: %w", err)
@@ -76,6 +76,8 @@ func (cm *Monitor) Untrack(path string) {
 // Stop monitoring files and close channels
 func (cm *Monitor) Stop() {
 	cm.watcher.Close()
+	close(cm.returnConfigChan)
+	close(cm.returnErrChan)
 }
 
 func (m *Monitor) GetNewConfiguration() <-chan (*ConfigurationFile) {
