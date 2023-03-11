@@ -3,34 +3,33 @@ package reload
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 )
 
-type Monitor struct {
+type monitor struct {
 	ctx              context.Context
 	watcher          *fsnotify.Watcher
-	configCache      *ConfigCache
+	configCache      *configCache
 	eventHandlers    []eventHandler
 	returnConfigChan chan (*ConfigurationFile)
 	returnErrChan    chan (error)
 }
 
-// NewMonitor initiate a new Monitor
-func NewMonitor(ctx context.Context) (*Monitor, error) {
+// newMonitor initiate a new Monitor
+func newMonitor(ctx context.Context) (*monitor, error) {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("error initializing config monitor: %w", err)
 	}
 
-	configChace := GetCacheInstance()
+	configChace := getCacheInstance()
 	eventHandlers := []eventHandler{
-		NewWriteEventHandler(ctx, fsWatcher.Events),
+		newWriteEventHandler(ctx, fsWatcher.Events),
 	}
 
-	m := &Monitor{
+	m := &monitor{
 		ctx:              ctx,
 		watcher:          fsWatcher,
 		configCache:      configChace,
@@ -44,9 +43,9 @@ func NewMonitor(ctx context.Context) (*Monitor, error) {
 	return m, nil
 }
 
-// TrackNew adds the file path to the monitored paths
-func (cm *Monitor) TrackNew(path string, config interface{}) error {
-	c, err := NewConfigurationFile(path, config)
+// trackNew adds the file path to the monitored paths
+func (cm *monitor) trackNew(path string, config interface{}) error {
+	c, err := newConfigurationFile(path, config)
 	if err != nil {
 		return err
 	}
@@ -59,43 +58,43 @@ func (cm *Monitor) TrackNew(path string, config interface{}) error {
 			err)
 	}
 
-	cm.configCache.Add(c)
+	cm.configCache.add(c)
 	return nil
 }
 
 // Untrack removes a path from the monitored files
-func (cm *Monitor) Untrack(path string) {
+func (cm *monitor) untrack(path string) {
 	if !filepath.IsAbs(path) {
 		path, _ = filepath.Abs(path)
 	}
 
 	cm.watcher.Remove(path)
-	cm.configCache.Remove(path)
+	cm.configCache.remove(path)
 }
 
 // Stop monitoring files and close channels
-func (cm *Monitor) Stop() {
+func (cm *monitor) stop() {
 	cm.watcher.Close()
 	close(cm.returnConfigChan)
 	close(cm.returnErrChan)
 }
 
-func (m *Monitor) GetNewConfiguration() <-chan (*ConfigurationFile) {
+func (m *monitor) getNewConfiguration() <-chan (*ConfigurationFile) {
 	return m.returnConfigChan
 }
 
-func (m *Monitor) GetNewConfigurationError() <-chan (error) {
+func (m *monitor) getNewConfigurationError() <-chan (error) {
 	return m.returnErrChan
 }
 
-func (m *Monitor) monitorUp() {
+func (m *monitor) monitorUp() {
 	for {
 		select {
 		case <-m.ctx.Done():
-			m.Stop()
-		case config := <-m.configCache.GetOnReload():
+			m.stop()
+		case config := <-m.configCache.getOnReload():
 			m.returnConfigChan <- config
-		case err := <-m.configCache.GetError():
+		case err := <-m.configCache.getError():
 			m.returnErrChan <- err
 		}
 	}

@@ -12,7 +12,7 @@ type ConfigurationFile struct {
 	Config   interface{}
 }
 
-func NewConfigurationFile(
+func newConfigurationFile(
 	path string,
 	configuration interface{}) (*ConfigurationFile, error) {
 	path, err := filepath.Abs(path)
@@ -36,7 +36,7 @@ func NewConfigurationFile(
 	}, nil
 }
 
-func (cf *ConfigurationFile) LoadConfiguration() error {
+func (cf *ConfigurationFile) loadConfiguration() error {
 	c, err := os.Open(cf.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open config file %s: %w", cf.FilePath, err)

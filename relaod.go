@@ -10,14 +10,8 @@ import (
 type ReloadConfig struct {
 	ctx           context.Context
 	logger        hclog.Logger
-	configMonitor *Monitor
+	configMonitor *monitor
 }
-
-type Event int
-
-const (
-	CONFIG_UPDATE Event = 0
-)
 
 // New creates a new reload config starts obsevering for config changes.
 // ctx is the scope used for Reload. When ctx is cancelled Reload will stop monitoring and reloading configurations
@@ -27,7 +21,7 @@ func New(ctx context.Context) (*ReloadConfig, error) {
 	l.SetLevel(hclog.Debug)
 
 	configMonitor, err :=
-		NewMonitor(ctx)
+		newMonitor(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize config monitor: %w", err)
 	}
@@ -45,7 +39,7 @@ func New(ctx context.Context) (*ReloadConfig, error) {
 // path is the file path
 // config is a json tagged struct where the config file will be marshalled into
 func (rc *ReloadConfig) AddConfiguration(path string, config interface{}) error {
-	return rc.configMonitor.TrackNew(path, config)
+	return rc.configMonitor.trackNew(path, config)
 }
 
 func (rc *ReloadConfig) GetErrChannel() <-chan (error) {
@@ -56,7 +50,7 @@ func (rc *ReloadConfig) GetRoloadChan() <-chan (*ConfigurationFile) {
 	return rc.configMonitor.returnConfigChan
 }
 
-// Close will stop the monitor and clean up resources
-func (rc *ReloadConfig) Close() {
-	rc.configMonitor.Stop()
+// Stop will stop the monitor and clean up resources
+func (rc *ReloadConfig) Stop() {
+	rc.configMonitor.stop()
 }
