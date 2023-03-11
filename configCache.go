@@ -40,6 +40,7 @@ func (cm *configCache) add(
 	for _, c := range configurations {
 		if _, ok := cm.configurations[c.FilePath]; !ok {
 			cm.configurations[c.FilePath] = c
+			cm.reload(c.FilePath)
 		}
 	}
 }
