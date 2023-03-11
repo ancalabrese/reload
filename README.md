@@ -19,6 +19,50 @@ Reload is actively being developed and maintained.
 - Multiple config file monitoring
 - Configuration validation
 
+## Introduction :information_source:
+- [Introducing Reload: A Golang hot-reload library for your configuration files]()
+
+## Usage/Examples
+
+For a fully working example check [here](https://github.com/ancalabrese/Reload/tree/main/example)
+```golang
+package main
+
+import (
+	"context"
+
+	reload "github.com/ancalabrese/Reload"
+)
+
+type Config struct {
+	Port     string `json:"port"`
+	Address  string `json:"address"`
+	Timeout  int    `json:"opTimeout"`
+}
+
+func main() {
+
+	ctx := context.Background()
+	config := &Config{}
+
+  rc, _ := reload.New(ctx)
+	rc.AddConfiguration("example/config.json", config)
+
+  	for {
+		select {
+		case err := <-rc.GetErrChannel():
+			// Handle errors
+		case conf := <-rc.GetRoloadChan():
+			// Reinitialize applicaiton
+		}
+	}
+}
+
+```
+
+## Authors
+
+- [@ancalabrese](https://calabreseantonio.com)
 
 ## Appendix :rocket:
 
