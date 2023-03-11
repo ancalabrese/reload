@@ -28,14 +28,6 @@ to make managing configuration even easier.
 Any feedback and contributions are welcome!
 
 <a href="https://www.buymeacoffee.com/ancalabrese">
-  <img src="https://img.buymeacoffee.com/button-api/?
-  text=Buy me pizza
-  &emoji=🍕
-  &slug=ancalabrese
-  &button_colour=5F7FFF
-  &font_colour=ffffff
-  &font_family=Poppins
-  &outline_colour=000000
-  &coffee_colour=FFDD00" width="150px" height="50px" />
+  <img src="https://img.buymeacoffee.com/button-api/?text=Buy me pizza&emoji=🍕&slug=ancalabrese&button_colour=5F7FFF&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00" width="150px" height="50px" />
 </a>
 
