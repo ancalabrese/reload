@@ -1,8 +1,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-<picture>
-<img alt="logo" src="/assets/logo.png" width="150" height="150") />
-</picture>
+![logo](/assets/logo.png)
 
 # Reload :arrows_counterclockwise:
 
