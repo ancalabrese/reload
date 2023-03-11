@@ -46,7 +46,7 @@ func (rc *ReloadConfig) GetErrChannel() <-chan (error) {
 	return rc.configMonitor.returnErrChan
 }
 
-func (rc *ReloadConfig) GetRoloadChan() <-chan (*ConfigurationFile) {
+func (rc *ReloadConfig) GetReloadChan() <-chan (*ConfigurationFile) {
 	return rc.configMonitor.returnConfigChan
 }
 

@@ -39,7 +39,7 @@ func main() {
 		select {
 		case err := <-rc.GetErrChannel():
 			log.Println("Received err: %w", err)
-		case conf := <-rc.GetRoloadChan():
+		case conf := <-rc.GetReloadChan():
 			log.Println("Received new config [", conf.FilePath, "]:", conf.Config)
 		}
 	}
