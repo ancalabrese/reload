@@ -9,12 +9,12 @@ import (
 
 type ConfigurationFile struct {
 	FilePath string
-	Config   interface{}
+	Config   any
 }
 
 func newConfigurationFile(
 	path string,
-	configuration interface{}) (*ConfigurationFile, error) {
+	configuration any) (*ConfigurationFile, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err

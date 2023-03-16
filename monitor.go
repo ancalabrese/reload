@@ -44,7 +44,7 @@ func newMonitor(ctx context.Context) (*monitor, error) {
 }
 
 // trackNew adds the file path to the monitored paths
-func (cm *monitor) trackNew(path string, config interface{}) error {
+func (cm *monitor) trackNew(path string, config any) error {
 	c, err := newConfigurationFile(path, config)
 	if err != nil {
 		return err
