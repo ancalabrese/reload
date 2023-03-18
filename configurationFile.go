@@ -1,15 +1,19 @@
 package reload
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/ancalabrese/reload/internal/encoding"
 )
 
 type ConfigurationFile struct {
 	FilePath string
 	Config   any
+	codec    encoding.Codec
 }
 
 func newConfigurationFile(
@@ -30,9 +34,15 @@ func newConfigurationFile(
 		return nil, fmt.Errorf("%s is a directory or not supported file type", path)
 	}
 
+	codec := encoding.New(getFileType(f))
+	if codec == nil {
+		return nil, fmt.Errorf("%s file type is not supported", f.Name())
+	}
+
 	return &ConfigurationFile{
 		FilePath: path,
 		Config:   configuration,
+		codec:    codec,
 	}, nil
 }
 
@@ -43,7 +53,8 @@ func (cf *ConfigurationFile) loadConfiguration() error {
 	}
 	defer c.Close()
 
-	err = json.NewDecoder(c).Decode(cf.Config)
+	// err = json.NewDecoder(c).Decode(cf.Config)
+	err = cf.codec.Decode(c, cf.Config)
 	if err != nil {
 		return fmt.Errorf("[loadConfiguration] - failed to marshal new config: %w", err)
 	}
@@ -61,4 +72,10 @@ func isDirectory(f *os.File) bool {
 
 	return stat.IsDir()
 
+}
+
+func getFileType(r io.Reader) string {
+	buff := make([]byte, 1024)
+	r.Read(buff)
+	return http.DetectContentType(buff)
 }

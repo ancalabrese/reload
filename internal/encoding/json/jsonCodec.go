@@ -1,15 +1,16 @@
-package reload
+package json
 
 import (
 	"encoding/json"
+	"io"
 )
 
-type jsonCodec struct{}
+type Codec struct{}
 
-func (jsonCodec) Encode(v any) ([]byte, error) {
+func (Codec) Encode(v any) ([]byte, error) {
 	return json.MarshalIndent(v, "", " ")
 }
 
-func (jsonCodec) Decode(b []byte, v any) error {
-	return json.Unmarshal(b, v)
+func (Codec) Decode(r io.Reader, v any) error {
+	return json.NewDecoder(r).Decode(v)
 }
