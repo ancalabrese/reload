@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ancalabrese/reload/internal/encoding/json"
+	"github.com/ancalabrese/reload/internal/encoding/xml"
 	"github.com/ancalabrese/reload/internal/encoding/yaml"
 )
 
@@ -21,9 +22,13 @@ func New(fileExtension string) Codec {
 		return json.Codec{}
 	}
 
-	if strings.Contains(fileExtension, "yaml") || strings.Contains(fileExtension, "yml") {
+	if strings.Contains(fileExtension, "yaml") ||
+		strings.Contains(fileExtension, "yml") {
 		return yaml.Codec{}
 	}
 
+	if strings.Contains(fileExtension, "xml") {
+		return xml.Codec{}
+	}
 	return nil
 }

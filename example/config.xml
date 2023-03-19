@@ -1,0 +1,5 @@
+<?xml version="1.0" ?>
+<app name="test">
+    <address>localhost</address>
+    <port>4999</port>
+</app>

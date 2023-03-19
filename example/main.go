@@ -2,24 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/xml"
 	"log"
 
 	"github.com/ancalabrese/reload"
 )
 
-type Config struct {
+type jsonConfig struct {
 	Disabled bool   `json:"disabled"`
 	Port     string `json:"port"`
 	Address  string `json:"address"`
 	Timeout  int    `json:"opTimeout"`
 }
-type Config2 struct {
-	Setting1 bool   `json:"setting1"`
-	Setting2 int    `json:"setting2"`
-	Setting3 string `json:"setting3"`
-}
 
-type Config3 struct {
+type yamlConfig struct {
 	Server struct {
 		KeepAlive int    `yaml:"keepaliveperiodseconds"`
 		Addr      string `yaml:"listenaddr"`
@@ -27,14 +23,20 @@ type Config3 struct {
 	} `yaml:"server"`
 }
 
-var config *Config
+type xmlConfig struct {
+	XMLName xml.Name `xml:"app"`
+	Address string   `yaml:"address"`
+	Port    int      `yaml:"port"`
+}
+
+var json *jsonConfig
 
 func main() {
 
 	ctx := context.Background()
-	config = &Config{}
-	config2 := &Config2{}
-	config3 := &Config3{}
+	json = &jsonConfig{}
+	yaml := &yamlConfig{}
+	xml := &xmlConfig{}
 
 	rc, err := reload.New(ctx)
 	if err != nil {
@@ -43,7 +45,7 @@ func main() {
 
 	log.Println("Update any value in ./config.json or ./config2.json to" +
 		" receive new configurations")
-		
+
 	go func() {
 		for {
 			select {
@@ -55,9 +57,9 @@ func main() {
 		}
 	}()
 
-	err = rc.AddConfiguration("./config.json", config)
-	err = rc.AddConfiguration("./config2.json", config2)
-	err = rc.AddConfiguration("./config.yaml", config3)
+	err = rc.AddConfiguration("./example/config.json", json)
+	err = rc.AddConfiguration("./example/config.yaml", yaml)
+	err = rc.AddConfiguration("./example/config.xml", xml)
 
 	if err != nil {
 		panic(err)
