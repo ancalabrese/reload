@@ -41,6 +41,20 @@ func main() {
 		log.Fatal("error:", err)
 	}
 
+	log.Println("Update any value in ./config.json or ./config2.json to" +
+		" receive new configurations")
+		
+	go func() {
+		for {
+			select {
+			case err := <-rc.GetErrChannel():
+				log.Println("Received err: %w", err)
+			case conf := <-rc.GetReloadChan():
+				log.Println("Received new config [", conf.FilePath, "]:", conf.Config)
+			}
+		}
+	}()
+
 	err = rc.AddConfiguration("./config.json", config)
 	err = rc.AddConfiguration("./config2.json", config2)
 	err = rc.AddConfiguration("./config.yaml", config3)
@@ -48,16 +62,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	log.Println("Update any value in ./config.json or ./config2.json to" +
-		" receive new configurations")
-
-	for {
-		select {
-		case err := <-rc.GetErrChannel():
-			log.Println("Received err: %w", err)
-		case conf := <-rc.GetReloadChan():
-			log.Println("Received new config [", conf.FilePath, "]:", conf.Config)
-		}
-	}
+	<-ctx.Done()
 }

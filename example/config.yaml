@@ -1,4 +1,4 @@
 server:
-  keepaliveperiodseconds: 0 
+  keepaliveperiodseconds: 0
   listenaddr: "localhost" 
-  port: 4
+  port: 4040
