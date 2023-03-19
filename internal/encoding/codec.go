@@ -17,7 +17,6 @@ type Codec interface {
 
 // New returns the right Codec based on the file type or nil if not suppported.
 func New(fileExtension string) Codec {
-	log.Print(fileExtension)
 	if strings.Contains(fileExtension, "json") {
 		return json.Codec{}
 	}
