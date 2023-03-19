@@ -2,8 +2,6 @@ package reload
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 
@@ -34,7 +32,7 @@ func newConfigurationFile(
 		return nil, fmt.Errorf("%s is a directory or not supported file type", path)
 	}
 
-	codec := encoding.New(getFileType(f))
+	codec := encoding.New(filepath.Ext(path))
 	if codec == nil {
 		return nil, fmt.Errorf("%s file type is not supported", f.Name())
 	}
@@ -72,10 +70,4 @@ func isDirectory(f *os.File) bool {
 
 	return stat.IsDir()
 
-}
-
-func getFileType(r io.Reader) string {
-	buff := make([]byte, 1024)
-	r.Read(buff)
-	return http.DetectContentType(buff)
 }

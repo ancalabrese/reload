@@ -2,6 +2,7 @@ package encoding
 
 import (
 	"io"
+	"log"
 	"strings"
 
 	"github.com/ancalabrese/reload/internal/encoding/json"
@@ -14,12 +15,13 @@ type Codec interface {
 }
 
 // New returns the right Codec based on the file type or nil if not suppported.
-func New(mimeType string) Codec {
-	if strings.Contains(mimeType, "json") {
+func New(fileExtension string) Codec {
+	log.Print(fileExtension)
+	if strings.Contains(fileExtension, "json") {
 		return json.Codec{}
 	}
 
-	if strings.Contains(mimeType, "yaml") || strings.Contains(mimeType, "yml") {
+	if strings.Contains(fileExtension, "yaml") || strings.Contains(fileExtension, "yml") {
 		return yaml.Codec{}
 	}
 

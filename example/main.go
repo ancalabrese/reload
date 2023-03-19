@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	reload "github.com/ancalabrese/Reload"
+	"github.com/ancalabrese/reload"
 )
 
 type Config struct {
@@ -19,6 +19,14 @@ type Config2 struct {
 	Setting3 string `json:"setting3"`
 }
 
+type Config3 struct {
+	Server struct {
+		KeepAlive int    `yaml:"keepaliveperiodseconds"`
+		Addr      string `yaml:"listenaddr"`
+		Port      int    `yaml:"port"`
+	} `yaml:"server"`
+}
+
 var config *Config
 
 func main() {
@@ -26,11 +34,20 @@ func main() {
 	ctx := context.Background()
 	config = &Config{}
 	config2 := &Config2{}
+	config3 := &Config3{}
 
-	rc, _ := reload.New(ctx)
+	rc, err := reload.New(ctx)
+	if err != nil {
+		log.Fatal("error:", err)
+	}
 
-	rc.AddConfiguration("example/config.json", config)
-	rc.AddConfiguration("example/config2.json", config2)
+	err = rc.AddConfiguration("./config.json", config)
+	err = rc.AddConfiguration("./config2.json", config2)
+	err = rc.AddConfiguration("./config.yaml", config3)
+
+	if err != nil {
+		panic(err)
+	}
 
 	log.Println("Update any value in ./config.json or ./config2.json to" +
 		" receive new configurations")
