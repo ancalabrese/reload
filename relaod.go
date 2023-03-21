@@ -7,17 +7,29 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+// ReloadConfig is the main object to initialize the reload library.
 type ReloadConfig struct {
 	ctx           context.Context
 	logger        hclog.Logger
 	configMonitor *monitor
 	errChan       chan (error)
 	configChan    chan (*ConfigurationFile)
+	rollbackFiles bool
+}
+
+type Option func(*ReloadConfig)
+
+// WithFileRollback enables file override. In case of any config error the configuration file will be reverted
+// back to the previous working version. Default is disabled.
+func WithFileRollback(enabled bool) Option {
+	return func(rc *ReloadConfig) {
+		rc.rollbackFiles = true
+	}
 }
 
 // New creates a new reload config starts obsevering for config changes.
 // ctx is the scope used for Reload. When ctx is cancelled Reload will stop monitoring and reloading configurations
-func New(ctx context.Context) (*ReloadConfig, error) {
+func New(ctx context.Context, options ...Option) (*ReloadConfig, error) {
 
 	l := hclog.Default()
 	l.SetLevel(hclog.Debug)
@@ -28,17 +40,22 @@ func New(ctx context.Context) (*ReloadConfig, error) {
 		return nil, fmt.Errorf("failed to initialize config monitor: %w", err)
 	}
 
-	cf := &ReloadConfig{
+	rc := &ReloadConfig{
 		logger:        l,
 		ctx:           ctx,
 		configMonitor: configMonitor,
 		errChan:       make(chan error),
 		configChan:    make(chan *ConfigurationFile),
+		rollbackFiles: false,
 	}
 
-	go cf.startEventListner()
+	for _, opt := range options {
+		opt(rc)
+	}
 
-	return cf, nil
+	go rc.startEventListner()
+
+	return rc, nil
 }
 
 // AddConfiguration adds a new config file to the monitor.
