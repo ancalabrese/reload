@@ -23,7 +23,7 @@ type Option func(*ReloadConfig)
 // back to the previous working version. Default is disabled.
 func WithFileRollback(enabled bool) Option {
 	return func(rc *ReloadConfig) {
-		rc.rollbackFiles = true
+		rc.rollbackFiles = enabled
 	}
 }
 
