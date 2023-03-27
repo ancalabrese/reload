@@ -2,13 +2,19 @@ package json
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 )
 
 type Codec struct{}
 
-func (Codec) Encode(v any) ([]byte, error) {
-	return json.MarshalIndent(v, "", " ")
+func (Codec) Encode(w io.Writer, v any) error {
+	b, err := json.MarshalIndent(v, "", " ")
+	if err != nil {
+		return fmt.Errorf("json encoder: encoding error: %w", err)
+	}
+	_, err = w.Write(b)
+	return err
 }
 
 func (Codec) Decode(r io.Reader, v any) error {

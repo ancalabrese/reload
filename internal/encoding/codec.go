@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"io"
-	"log"
 	"strings"
 
 	"github.com/ancalabrese/reload/internal/encoding/json"
@@ -11,7 +10,7 @@ import (
 )
 
 type Codec interface {
-	Encode(v any) ([]byte, error)
+	Encode(w io.Writer, v any) error
 	Decode(r io.Reader, v any) error
 }
 

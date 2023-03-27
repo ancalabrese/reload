@@ -2,13 +2,19 @@ package xml
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 )
 
 type Codec struct{}
 
-func (c Codec) Encode(v any) ([]byte, error) {
-	return xml.Marshal(v)
+func (Codec) Encode(w io.Writer, v any) error {
+	b, err := xml.MarshalIndent(v, "", " ")
+	if err != nil {
+		return fmt.Errorf("xml encoder: encoding error: %w", err)
+	}
+	_, err = w.Write(b)
+	return err
 }
 
 func (c Codec) Decode(r io.Reader, v any) error {
