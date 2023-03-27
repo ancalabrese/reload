@@ -26,6 +26,7 @@ func newConfigurationFile(
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	// At this point only files are supported. Make sure the path is not a folder
 	if isDirectory(f) {
