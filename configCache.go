@@ -72,6 +72,8 @@ func (cm *configCache) reload(path string) {
 	if err != nil {
 		err = fmt.Errorf("error loading new config: %w", err)
 		cm.onErrorChan <- err
+		// Rollback file to the current working config in cache
+		cm.get(path).saveConfiguration()
 		return
 	}
 

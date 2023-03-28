@@ -62,7 +62,7 @@ func (cf *ConfigurationFile) loadConfiguration() error {
 }
 
 func (cf *ConfigurationFile) saveConfiguration() error {
-	c, err := os.Open(cf.FilePath)
+	c, err := os.OpenFile(cf.FilePath, os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to open config file %s: %w", cf.FilePath, err)
 	}
