@@ -61,6 +61,20 @@ func (cf *ConfigurationFile) loadConfiguration() error {
 	return nil
 }
 
+func (cf *ConfigurationFile) saveConfiguration() error {
+	c, err := os.Open(cf.FilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open config file %s: %w", cf.FilePath, err)
+	}
+	defer c.Close()
+
+	err = cf.codec.Encode(c, cf.Config)
+	if err != nil {
+		err = fmt.Errorf("[loadConfiguration] - failed to marshal new config: %w", err)
+	}
+	return err
+}
+
 // isDirectory checks whether the provided files is a directory.
 // Directories are not supported.
 func isDirectory(f *os.File) bool {
