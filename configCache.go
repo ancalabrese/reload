@@ -72,6 +72,7 @@ func (cm *configCache) reload(path string) {
 	if err != nil {
 		err = fmt.Errorf("error loading new config: %w", err)
 		cm.onErrorChan <- err
+		return
 	}
 
 	cm.onReloadChan <- cm.get(path)
