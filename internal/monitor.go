@@ -1,4 +1,4 @@
-package reload
+package internal
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-type monitor struct {
+type Monitor struct {
 	ctx              context.Context
 	watcher          *fsnotify.Watcher
 	configCache      *cache.Cache
@@ -20,8 +20,8 @@ type monitor struct {
 	returnErrChan    chan (error)
 }
 
-// newMonitor initiate a new Monitor
-func newMonitor(ctx context.Context) (*monitor, error) {
+// NewMonitor initiate a new Monitor
+func NewMonitor(ctx context.Context) (*Monitor, error) {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("error initializing config monitor: %w", err)
@@ -32,7 +32,7 @@ func newMonitor(ctx context.Context) (*monitor, error) {
 		handlers.NewWriteEventHandler(ctx, fsWatcher.Events),
 	}
 
-	m := &monitor{
+	m := &Monitor{
 		ctx:              ctx,
 		watcher:          fsWatcher,
 		configCache:      configChace,
@@ -46,8 +46,8 @@ func newMonitor(ctx context.Context) (*monitor, error) {
 	return m, nil
 }
 
-// trackNew adds the file path to the monitored paths
-func (cm *monitor) trackNew(path string, config any) error {
+// TrackNew adds the file path to the monitored paths
+func (cm *Monitor) TrackNew(path string, config any) error {
 	c, err := data.NewConfigurationFile(path, config)
 	if err != nil {
 		return err
@@ -66,7 +66,7 @@ func (cm *monitor) trackNew(path string, config any) error {
 }
 
 // Untrack removes a path from the monitored files
-func (cm *monitor) untrack(path string) {
+func (cm *Monitor) Untrack(path string) {
 	if !filepath.IsAbs(path) {
 		path, _ = filepath.Abs(path)
 	}
@@ -76,25 +76,25 @@ func (cm *monitor) untrack(path string) {
 }
 
 // Stop monitoring files and close channels
-func (cm *monitor) stop() {
+func (cm *Monitor) Stop() {
 	cm.watcher.Close()
 	close(cm.returnConfigChan)
 	close(cm.returnErrChan)
 }
 
-func (m *monitor) getNewConfiguration() <-chan (*data.ConfigurationFile) {
+func (m *Monitor) GetNewConfiguration() <-chan (*data.ConfigurationFile) {
 	return m.returnConfigChan
 }
 
-func (m *monitor) getNewConfigurationError() <-chan (error) {
+func (m *Monitor) GetNewConfigurationError() <-chan (error) {
 	return m.returnErrChan
 }
 
-func (m *monitor) monitorUp() {
+func (m *Monitor) monitorUp() {
 	for {
 		select {
 		case <-m.ctx.Done():
-			m.stop()
+			m.Stop()
 		case config := <-m.configCache.GetOnReload():
 			m.returnConfigChan <- config
 		case err := <-m.configCache.GetError():

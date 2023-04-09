@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ancalabrese/reload/data"
+	"github.com/ancalabrese/reload/internal"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -12,7 +13,7 @@ import (
 type ReloadConfig struct {
 	ctx           context.Context
 	logger        hclog.Logger
-	configMonitor *monitor
+	configMonitor *internal.Monitor
 	errChan       chan (error)
 	configChan    chan (*data.ConfigurationFile)
 	rollbackFiles bool
@@ -36,7 +37,7 @@ func New(ctx context.Context, options ...Option) (*ReloadConfig, error) {
 	l.SetLevel(hclog.Debug)
 
 	configMonitor, err :=
-		newMonitor(ctx)
+		internal.NewMonitor(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize config monitor: %w", err)
 	}
@@ -63,7 +64,7 @@ func New(ctx context.Context, options ...Option) (*ReloadConfig, error) {
 // path is the file path
 // config is a json tagged struct where the config file will be marshalled into
 func (rc *ReloadConfig) AddConfiguration(path string, config any) error {
-	return rc.configMonitor.trackNew(path, config)
+	return rc.configMonitor.TrackNew(path, config)
 }
 
 func (rc *ReloadConfig) GetErrChannel() <-chan (error) {
@@ -76,7 +77,7 @@ func (rc *ReloadConfig) GetReloadChan() <-chan (*data.ConfigurationFile) {
 
 // Stop will stop the monitor and clean up resources
 func (rc *ReloadConfig) Stop() {
-	rc.configMonitor.stop()
+	rc.configMonitor.Stop()
 	close(rc.errChan)
 	close(rc.configChan)
 }
@@ -86,9 +87,9 @@ func (rc *ReloadConfig) startEventListner() {
 		select {
 		case <-rc.ctx.Done():
 			rc.Stop()
-		case err := <-rc.configMonitor.getNewConfigurationError():
+		case err := <-rc.configMonitor.GetNewConfigurationError():
 			rc.errChan <- err
-		case config := <-rc.configMonitor.getNewConfiguration():
+		case config := <-rc.configMonitor.GetNewConfiguration():
 			rc.configChan <- config
 		}
 	}
