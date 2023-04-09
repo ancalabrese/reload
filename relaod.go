@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ancalabrese/reload/data"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -13,7 +14,7 @@ type ReloadConfig struct {
 	logger        hclog.Logger
 	configMonitor *monitor
 	errChan       chan (error)
-	configChan    chan (*ConfigurationFile)
+	configChan    chan (*data.ConfigurationFile)
 	rollbackFiles bool
 }
 
@@ -45,7 +46,7 @@ func New(ctx context.Context, options ...Option) (*ReloadConfig, error) {
 		ctx:           ctx,
 		configMonitor: configMonitor,
 		errChan:       make(chan error),
-		configChan:    make(chan *ConfigurationFile),
+		configChan:    make(chan *data.ConfigurationFile),
 		rollbackFiles: false,
 	}
 
@@ -69,7 +70,7 @@ func (rc *ReloadConfig) GetErrChannel() <-chan (error) {
 	return rc.errChan
 }
 
-func (rc *ReloadConfig) GetReloadChan() <-chan (*ConfigurationFile) {
+func (rc *ReloadConfig) GetReloadChan() <-chan (*data.ConfigurationFile) {
 	return rc.configChan
 }
 

@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/ancalabrese/reload/data"
+	"github.com/ancalabrese/reload/internal/cache"
+	"github.com/ancalabrese/reload/internal/handlers"
 	"github.com/fsnotify/fsnotify"
 )
 
 type monitor struct {
 	ctx              context.Context
 	watcher          *fsnotify.Watcher
-	configCache      *configCache
-	eventHandlers    []eventHandler
-	returnConfigChan chan (*ConfigurationFile)
+	configCache      *cache.Cache
+	eventHandlers    []handlers.EventHandler
+	returnConfigChan chan (*data.ConfigurationFile)
 	returnErrChan    chan (error)
 }
 
@@ -24,9 +27,9 @@ func newMonitor(ctx context.Context) (*monitor, error) {
 		return nil, fmt.Errorf("error initializing config monitor: %w", err)
 	}
 
-	configChace := getCacheInstance()
-	eventHandlers := []eventHandler{
-		newWriteEventHandler(ctx, fsWatcher.Events),
+	configChace := cache.GetInstance()
+	eventHandlers := []handlers.EventHandler{
+		handlers.NewWriteEventHandler(ctx, fsWatcher.Events),
 	}
 
 	m := &monitor{
@@ -34,7 +37,7 @@ func newMonitor(ctx context.Context) (*monitor, error) {
 		watcher:          fsWatcher,
 		configCache:      configChace,
 		eventHandlers:    eventHandlers,
-		returnConfigChan: make(chan *ConfigurationFile),
+		returnConfigChan: make(chan *data.ConfigurationFile),
 		returnErrChan:    make(chan error),
 	}
 
@@ -45,7 +48,7 @@ func newMonitor(ctx context.Context) (*monitor, error) {
 
 // trackNew adds the file path to the monitored paths
 func (cm *monitor) trackNew(path string, config any) error {
-	c, err := newConfigurationFile(path, config)
+	c, err := data.NewConfigurationFile(path, config)
 	if err != nil {
 		return err
 	}
@@ -58,7 +61,7 @@ func (cm *monitor) trackNew(path string, config any) error {
 			err)
 	}
 
-	cm.configCache.add(c)
+	cm.configCache.Add(c)
 	return nil
 }
 
@@ -69,7 +72,7 @@ func (cm *monitor) untrack(path string) {
 	}
 
 	cm.watcher.Remove(path)
-	cm.configCache.remove(path)
+	cm.configCache.Remove(path)
 }
 
 // Stop monitoring files and close channels
@@ -79,7 +82,7 @@ func (cm *monitor) stop() {
 	close(cm.returnErrChan)
 }
 
-func (m *monitor) getNewConfiguration() <-chan (*ConfigurationFile) {
+func (m *monitor) getNewConfiguration() <-chan (*data.ConfigurationFile) {
 	return m.returnConfigChan
 }
 
@@ -92,9 +95,9 @@ func (m *monitor) monitorUp() {
 		select {
 		case <-m.ctx.Done():
 			m.stop()
-		case config := <-m.configCache.getOnReload():
+		case config := <-m.configCache.GetOnReload():
 			m.returnConfigChan <- config
-		case err := <-m.configCache.getError():
+		case err := <-m.configCache.GetError():
 			m.returnErrChan <- err
 		}
 	}

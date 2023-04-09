@@ -1,4 +1,4 @@
-package reload
+package handlers
 
 import (
 	"context"
@@ -6,26 +6,27 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ancalabrese/reload/internal/cache"
 	"github.com/fsnotify/fsnotify"
 )
 
 type writeEventHandler struct {
 	ctx         context.Context
 	cancelFunc  context.CancelFunc
-	configCache *configCache
+	configCache *cache.Cache
 }
 
-// newWriteEventHandler creates a new WriteEventHandler and waits for new
+// NewWriteEventHandler creates a new WriteEventHandler and waits for new
 // Write events to come through.
-func newWriteEventHandler(
+func NewWriteEventHandler(
 	ctx context.Context,
-	eventChannel <-chan (fsnotify.Event)) eventHandler {
+	eventChannel <-chan (fsnotify.Event)) EventHandler {
 
 	context, cancelFunc := context.WithCancel(ctx)
 	weh := &writeEventHandler{
 		ctx:         context,
 		cancelFunc:  cancelFunc,
-		configCache: getCacheInstance(),
+		configCache: cache.GetInstance(),
 	}
 
 	go weh.handleEvent(eventChannel)
@@ -65,7 +66,7 @@ func (weh *writeEventHandler) handleEvent(eventCh <-chan (fsnotify.Event)) {
 				if !ok {
 					t = time.AfterFunc(math.MaxInt64, func() {
 						defer cleanUpTimerFunc(event.Name)
-						weh.configCache.reload(event.Name)
+						weh.configCache.Reload(event.Name)
 					})
 					t.Stop()
 

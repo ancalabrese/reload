@@ -1,51 +1,53 @@
-package reload
+package cache
 
 import (
 	"fmt"
 	"path/filepath"
 	"sync"
+
+	"github.com/ancalabrese/reload/data"
 )
 
 // ConfigCache is the internal cache of monitored files.
-type configCache struct {
-	configurations map[string]*ConfigurationFile
-	onReloadChan   chan (*ConfigurationFile)
+type Cache struct {
+	configurations map[string]*data.ConfigurationFile
+	onReloadChan   chan (*data.ConfigurationFile)
 	onErrorChan    chan (error)
 }
 
-var configManager *configCache
+var configCache *Cache
 var lock = &sync.Mutex{}
 
-// getCacheInstance get a singleton instance ConfigCache
-func getCacheInstance() *configCache {
+// GetInstance get a singleton instance ConfigCache
+func GetInstance() *Cache {
 
-	if configManager == nil {
+	if configCache == nil {
 		lock.Lock()
 		defer lock.Unlock()
-		if configManager == nil { // Once locked check instance is still nil
-			configManager = &configCache{
-				configurations: make(map[string]*ConfigurationFile),
-				onReloadChan:   make(chan *ConfigurationFile),
+		if configCache == nil { // Once locked check instance is still nil
+			configCache = &Cache{
+				configurations: make(map[string]*data.ConfigurationFile),
+				onReloadChan:   make(chan *data.ConfigurationFile),
 				onErrorChan:    make(chan error),
 			}
 		}
 	}
 
-	return configManager
+	return configCache
 }
 
 // add new files to ConfigCache.
-func (cm *configCache) add(
-	configurations ...*ConfigurationFile) {
+func (cm *Cache) Add(
+	configurations ...*data.ConfigurationFile) {
 	for _, c := range configurations {
 		if _, ok := cm.configurations[c.FilePath]; !ok {
 			cm.configurations[c.FilePath] = c
-			cm.reload(c.FilePath)
+			cm.Reload(c.FilePath)
 		}
 	}
 }
 
-func (cm *configCache) get(path string) *ConfigurationFile {
+func (cm *Cache) Get(path string) *data.ConfigurationFile {
 	if !filepath.IsAbs(path) {
 		path, _ = filepath.Abs(path)
 	}
@@ -54,7 +56,7 @@ func (cm *configCache) get(path string) *ConfigurationFile {
 }
 
 // Remove removes files from ConfigCache.
-func (cm *configCache) remove(path string) {
+func (cm *Cache) Remove(path string) {
 	if !filepath.IsAbs(path) {
 		path, _ = filepath.Abs(path)
 	}
@@ -63,27 +65,27 @@ func (cm *configCache) remove(path string) {
 
 // Reload reads the config file and updates the
 // cached configuration files
-func (cm *configCache) reload(path string) {
+func (cm *Cache) Reload(path string) {
 	if !filepath.IsAbs(path) {
 		path, _ = filepath.Abs(path)
 	}
 
-	err := cm.get(path).loadConfiguration()
+	err := cm.Get(path).LoadConfiguration()
 	if err != nil {
 		err = fmt.Errorf("error loading new config: %w", err)
 		cm.onErrorChan <- err
 		// Rollback file to the current working config in cache
-		cm.get(path).saveConfiguration()
+		cm.Get(path).SaveConfiguration()
 		return
 	}
 
-	cm.onReloadChan <- cm.get(path)
+	cm.onReloadChan <- cm.Get(path)
 }
 
-func (cm *configCache) getOnReload() <-chan (*ConfigurationFile) {
+func (cm *Cache) GetOnReload() <-chan (*data.ConfigurationFile) {
 	return cm.onReloadChan
 }
 
-func (cm *configCache) getError() <-chan (error) {
+func (cm *Cache) GetError() <-chan (error) {
 	return cm.onErrorChan
 }

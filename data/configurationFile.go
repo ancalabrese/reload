@@ -1,4 +1,4 @@
-package reload
+package data
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ type ConfigurationFile struct {
 	codec    encoding.Codec
 }
 
-func newConfigurationFile(
+func NewConfigurationFile(
 	path string,
 	configuration any) (*ConfigurationFile, error) {
 	path, err := filepath.Abs(path)
@@ -45,7 +45,7 @@ func newConfigurationFile(
 	}, nil
 }
 
-func (cf *ConfigurationFile) loadConfiguration() error {
+func (cf *ConfigurationFile) LoadConfiguration() error {
 	c, err := os.Open(cf.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open config file %s: %w", cf.FilePath, err)
@@ -61,7 +61,7 @@ func (cf *ConfigurationFile) loadConfiguration() error {
 	return nil
 }
 
-func (cf *ConfigurationFile) saveConfiguration() error {
+func (cf *ConfigurationFile) SaveConfiguration() error {
 	c, err := os.OpenFile(cf.FilePath, os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to open config file %s: %w", cf.FilePath, err)
