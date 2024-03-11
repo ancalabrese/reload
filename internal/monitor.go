@@ -12,7 +12,6 @@ import (
 )
 
 type Monitor struct {
-	ctx              context.Context
 	watcher          *fsnotify.Watcher
 	configCache      *cache.Cache
 	eventHandlers    []handlers.EventHandler
@@ -33,7 +32,6 @@ func NewMonitor(ctx context.Context) (*Monitor, error) {
 	}
 
 	m := &Monitor{
-		ctx:              ctx,
 		watcher:          fsWatcher,
 		configCache:      configChace,
 		eventHandlers:    eventHandlers,
@@ -41,7 +39,7 @@ func NewMonitor(ctx context.Context) (*Monitor, error) {
 		returnErrChan:    make(chan error),
 	}
 
-	go m.monitorUp()
+	go m.monitorUp(ctx)
 
 	return m, nil
 }
@@ -90,10 +88,10 @@ func (m *Monitor) GetNewConfigurationError() <-chan (error) {
 	return m.returnErrChan
 }
 
-func (m *Monitor) monitorUp() {
+func (m *Monitor) monitorUp(ctx context.Context) {
 	for {
 		select {
-		case <-m.ctx.Done():
+		case <-ctx.Done():
 			m.Stop()
 		case config := <-m.configCache.GetOnReload():
 			m.returnConfigChan <- config

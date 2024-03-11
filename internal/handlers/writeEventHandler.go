@@ -11,8 +11,6 @@ import (
 )
 
 type writeEventHandler struct {
-	ctx         context.Context
-	cancelFunc  context.CancelFunc
 	configCache *cache.Cache
 }
 
@@ -24,19 +22,18 @@ func NewWriteEventHandler(
 
 	context, cancelFunc := context.WithCancel(ctx)
 	weh := &writeEventHandler{
-		ctx:         context,
-		cancelFunc:  cancelFunc,
 		configCache: cache.GetInstance(),
 	}
 
-	go weh.handleEvent(eventChannel)
+	go weh.handleEvent(eventChannel, context, cancelFunc)
 	return weh
 }
 
 // handleEvent handles any fsnotify.Write events.
 // Write events might come in bursts, so it listens until no more events
 // are received for the same file, then it attempts to reload the config file.
-func (weh *writeEventHandler) handleEvent(eventCh <-chan (fsnotify.Event)) {
+func (weh *writeEventHandler) handleEvent(eventCh <-chan (fsnotify.Event),
+	ctx context.Context, onCancel context.CancelFunc) {
 	// Wait 100ms for new events; each new event resets the timer.
 	waitFor := 100 * time.Millisecond
 	var mu sync.Mutex
@@ -78,7 +75,7 @@ func (weh *writeEventHandler) handleEvent(eventCh <-chan (fsnotify.Event)) {
 				// Reset the timer for this path, so it will start from 100ms again.
 				t.Reset(waitFor)
 			}
-		case <-weh.ctx.Done():
+		case <-ctx.Done():
 			return
 		}
 	}
